@@ -2,6 +2,7 @@ var http = require('http');
 var https = require('https');
 var fs = require('fs');
 var url = require('url');
+var domain = require('domain');
 
 var requestListener = function (request, response) {
     // 解析请求，包括文件名
@@ -9,11 +10,18 @@ var requestListener = function (request, response) {
  
     // 输出请求的文件名
     console.log("Request for " + pathname + " received.");
- 
+
+    // 服务器需要设置的响应头
+    var responseHeaders = {'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type'};
+
     // 请求合法性检查
-    if (pathname.indexOf('/tmp') === 0) {
+    if (request.method === 'OPTIONS') {
+        response.writeHead(200, responseHeaders);
+        response.end();
+    } else if (pathname.indexOf('/tmp') === 0) {
         // 不允许请求 tmp 内文件
-        response.writeHead(404, {'Content-Type': 'text/plain'});
+        response.writeHead(404, responseHeaders);
         response.end();
     } else if (pathname.indexOf('/api/submitcomment') === 0) {
         // 客户端提交评论
@@ -179,10 +187,10 @@ var requestListener = function (request, response) {
                 });
                 newHEADResponse.on('end', function () {
                     var responseJSON = JSON.parse(body);
-                    console.log(responseJSON);
+                    var newHEADID = responseJSON.object.sha;
 
                     if (typeof(callback) === 'function') {
-                        callback();
+                        callback(newHEADID);
                     }
                 });
             });
@@ -195,48 +203,74 @@ var requestListener = function (request, response) {
         }
         
         /* */
-        // 解析评论数据
-        var body = '';
-        request.on('data', function (data) {
-            body += data;
+        // domain
+        var localDomain = domain.create();
+        localDomain.on('error', function(err) {
+            // 异常捕获
+            response.writeHead(200, responseHeaders);
+            var result = {
+                'error': 1,
+                'message': err.message
+            };
+            response.write(JSON.stringify(result));
+            response.end();
         });
-        request.on('end', function () {
-            var postData = JSON.parse(body);
-            pageID = postData.page_id;
-            email = postData.email;
-            date = postData.date;
-            displayName = postData.display_name;
-            content = postData.content;
-            // 评论数据模型
-            var commentInfo = [{
-                'email': email,
-                'date': date,
-                'author': {
-                    'display_name': displayName,
-                },
-                'content': content
-            }];
-            comment = {};
-            comment[pageID] = commentInfo;
+        localDomain.run(function () {
+            // run
+            var body = '';
+            request.on('data', function (data) {
+                body += data;
+            });
+            request.on('end', function () {
+                if (body.length === 0) {
+                    throw new Error('评论读取失败');
+                }
+                var postData = JSON.parse(body);
+                pageID = postData.page_id;
+                email = postData.email;
+                date = postData.date;
+                displayName = postData.display_name;
+                content = postData.content;
+                // 评论数据模型
+                var commentInfo = [{
+                    'email': email,
+                    'date': date,
+                    'author': {
+                        'display_name': displayName,
+                    },
+                    'content': content
+                }];
+                comment = {};
+                comment[pageID] = commentInfo;
 
-            // 获取 reference
-            getGitHubReference(function (lastCommitID) {
-                // 获取 commit
-                getGitHubCommit(lastCommitID, function (treeID) {
-                    // 创建新的 tree 对象
-                    postGitHubTree(treeID, function (newTreeID) {
-                        // 创建新的 commit
-                        postGitHubCommit(lastCommitID, newTreeID, function (newCommitID) {
-                            // 修改 reference
-                            postGitHubReference(newCommitID, function () {
-                                // 响应客户端请求
-                                response.end();
+                // 获取 reference
+                getGitHubReference(function (lastCommitID) {
+                    // 获取 commit
+                    getGitHubCommit(lastCommitID, function (treeID) {
+                        // 创建新的 tree 对象
+                        postGitHubTree(treeID, function (newTreeID) {
+                            // 创建新的 commit
+                            postGitHubCommit(lastCommitID, newTreeID, function (newCommitID) {
+                                // 修改 reference
+                                postGitHubReference(newCommitID, function (newHEADID) {
+                                    // 响应客户端请求
+                                    response.writeHead(200, responseHeaders);
+                                    var link = 'https://github.com/' + OWNER_NAME + '/' + REPO_NAME + "/commit/" + newHEADID;
+                                    var result = {
+                                        'error': 0,
+                                        'message': '成功',
+                                        'link': link
+                                    };
+                                    response.write(JSON.stringify(result));
+                                    response.end();
+                                });
                             });
                         });
                     });
                 });
-            });
-        }); // 解析评论数据结束
+
+            }); // request on end
+        }); // domain run
     }
 };
 // 创建服务器
@@ -245,4 +279,4 @@ var portNum = 8888;
 server.listen(portNum);
 
 // 控制台会输出以下信息
-console.log('Server running at Port' + portNum);
+console.log('Server running at Port ' + portNum);
