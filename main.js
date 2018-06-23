@@ -32,6 +32,7 @@ var requestListener = function (request, response) {
         
         // 读取 AuthorizationToken
         var token = fs.readFileSync('tmp/AuthorizationToken', 'utf-8');
+        token = token.replace(/[\r\n]/g, '');
 
         // 客户端数据
         var pageID;
