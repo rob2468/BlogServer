@@ -104,13 +104,16 @@ var requestListener = function (request, response) {
                 headers: {
                     'User-Agent': REPO_NAME,
                     'Authorization': token,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json;charset=utf-8'
                 }
             };
             var treeRequest = https.request(treeOptions, function (treeResponse) {
                 var body = '';
                 treeResponse.on('data', function (data) {
                     body += data;
+                });
+                treeResponse.on('error', function (err) {
+                    throw err;
                 });
                 treeResponse.on('end', function () {
                     var responseJSON = JSON.parse(body);
@@ -142,7 +145,7 @@ var requestListener = function (request, response) {
                 headers: {
                     'User-Agent': REPO_NAME,
                     'Authorization': token,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json;charset=utf-8'
                 }
             };
             var newCommitRequest = https.request(newCommitOptions, function (newCommitResponse) {
@@ -177,7 +180,7 @@ var requestListener = function (request, response) {
                 headers: {
                     'User-Agent': REPO_NAME,
                     'Authorization': token,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json;charset=utf-8'
                 }
             };
             var newHEADRequest = https.request(newHEADOptions, function (newHEADResponse) {
