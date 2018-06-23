@@ -1,36 +1,248 @@
 var http = require('http');
+var https = require('https');
 var fs = require('fs');
 var url = require('url');
 
+var requestListener = function (request, response) {
+    // 解析请求，包括文件名
+    var pathname = url.parse(request.url).pathname;
+ 
+    // 输出请求的文件名
+    console.log("Request for " + pathname + " received.");
+ 
+    // 请求合法性检查
+    if (pathname.indexOf('/tmp') === 0) {
+        // 不允许请求 tmp 内文件
+        response.writeHead(404, {'Content-Type': 'text/plain'});
+        response.end();
+    } else if (pathname.indexOf('/api/submitcomment') === 0) {
+        // 客户端提交评论
+        // 常量
+        var BRANCH_NAME = 'comments';
+        var OWNER_NAME = 'rob2468';
+        var REPO_NAME = 'rob2468.github.io';
+        
+        // 读取 AuthorizationToken
+        var token = fs.readFileSync('tmp/AuthorizationToken', 'utf-8');
 
+        // 客户端数据
+        var pageID;
+        var email;
+        var date;
+        var displayName;
+        var content;
+        var comment;
+
+        /* 函数定义 */
+        // 获取 reference
+        function getGitHubReference(callback) {
+            var refOptions = {
+                hostname: 'api.github.com',
+                path: '/repos/' + OWNER_NAME + '/' + REPO_NAME + '/git/refs/heads/' + BRANCH_NAME,
+                headers: {
+                    'User-Agent': REPO_NAME,
+                }
+            };
+            https.get(refOptions, function (refResponse) {
+                var body = '';
+                refResponse.on('data', function (data) {
+                    body += data;
+                });
+                refResponse.on('error', function (err) {
+                    console.log(err);
+                });
+                refResponse.on('end', function () {
+                    // 解析 reference 信息
+                    var responseJSON = JSON.parse(body);
+                    var lastCommitID = responseJSON.object.sha;
+                    if (typeof(callback) === 'function') {
+                        callback(lastCommitID);
+                    }
+                });
+            });
+        }
+
+        // 获取 commit
+        function getGitHubCommit(lastCommitID, callback) {
+            var commitOptions = {
+                hostname: 'api.github.com',
+                path: '/repos/' + OWNER_NAME + '/' + REPO_NAME + '/git/commits/' + lastCommitID,
+                headers: {
+                    'User-Agent': REPO_NAME,
+                }   
+            };
+            https.get(commitOptions, function (commitResponse) {
+                var body = '';
+                commitResponse.on('data', function (data) {
+                    body += data;
+                });
+                commitResponse.on('end', function () {
+                    // 解析 commit 信息
+                    var responseJSON = JSON.parse(body);
+                    var treeID = responseJSON.tree.sha;
+                    if (typeof(callback) === 'function') {
+                        callback(treeID);
+                    }
+                });
+            });
+        }
+
+        // 创建新的 tree 对象
+        function postGitHubTree(treeID, callback) {
+            var treeOptions = {
+                hostname: 'api.github.com',
+                path: '/repos/' + OWNER_NAME + '/' + REPO_NAME + '/git/trees',
+                method: 'POST',
+                headers: {
+                    'User-Agent': REPO_NAME,
+                    'Authorization': token,
+                    'Content-Type': 'application/json'
+                }
+            };
+            var treeRequest = https.request(treeOptions, function (treeResponse) {
+                var body = '';
+                treeResponse.on('data', function (data) {
+                    body += data;
+                });
+                treeResponse.on('end', function () {
+                    var responseJSON = JSON.parse(body);
+                    var newTreeID = responseJSON.sha;
+                    if (typeof(callback) === 'function') {
+                        callback(newTreeID);
+                    }
+                });
+            });
+            var newTreeJSON = {
+                'tree': [{
+                    'path': '_data/raw_comments/comment_' + new Date().getTime(),
+                    'mode': '100644',
+                    'type': 'blob',
+                    'content': JSON.stringify(comment)
+                }],
+                "base_tree": treeID,
+              };  
+            treeRequest.write(JSON.stringify(newTreeJSON));
+            treeRequest.end();
+        }
+
+        // 创建新的 commit
+        function postGitHubCommit(lastCommitID, newTreeID, callback) {
+            var newCommitOptions = {
+                hostname: 'api.github.com',
+                path: '/repos/' + OWNER_NAME + '/' + REPO_NAME + '/git/commits',
+                method: 'POST',
+                headers: {
+                    'User-Agent': REPO_NAME,
+                    'Authorization': token,
+                    'Content-Type': 'application/json'
+                }
+            };
+            var newCommitRequest = https.request(newCommitOptions, function (newCommitResponse) {
+                var body = '';
+                newCommitResponse.on('data', function (data) {
+                    body += data;
+                });
+                newCommitResponse.on('end', function () {
+                    var responseJSON = JSON.parse(body);
+                    var newCommitID = responseJSON.sha;
+
+                    if (typeof(callback) === 'function') {
+                        callback(newCommitID);
+                    }
+                });
+            });
+            var newCommitJSON = {
+                'message': 'comment by ' + displayName + ' on ' + date,
+                'tree': newTreeID,
+                'parents': [lastCommitID]
+            };
+            newCommitRequest.write(JSON.stringify(newCommitJSON));
+            newCommitRequest.end();
+        }
+
+        // 修改 reference
+        function postGitHubReference(newCommitID, callback) {
+            var newHEADOptions = {
+                hostname: 'api.github.com',
+                path: '/repos/' + OWNER_NAME + '/' + REPO_NAME + '/git/refs/heads/' + BRANCH_NAME,
+                 method: 'POST',
+                headers: {
+                    'User-Agent': REPO_NAME,
+                    'Authorization': token,
+                    'Content-Type': 'application/json'
+                }
+            };
+            var newHEADRequest = https.request(newHEADOptions, function (newHEADResponse) {
+                var body = '';
+                newHEADResponse.on('data', function (data) {
+                    body += data;
+                });
+                newHEADResponse.on('end', function () {
+                    var responseJSON = JSON.parse(body);
+                    console.log(responseJSON);
+
+                    if (typeof(callback) === 'function') {
+                        callback();
+                    }
+                });
+            });
+            var newHEADJSON = {
+                "sha": newCommitID,
+                "force": false
+            };
+            newHEADRequest.write(JSON.stringify(newHEADJSON));
+            newHEADRequest.end();
+        }
+        
+        /* */
+        // 解析评论数据
+        var body = '';
+        request.on('data', function (data) {
+            body += data;
+        });
+        request.on('end', function () {
+            var postData = JSON.parse(body);
+            pageID = postData.page_id;
+            email = postData.email;
+            date = postData.date;
+            displayName = postData.display_name;
+            content = postData.content;
+            // 评论数据模型
+            var commentInfo = [{
+                'email': email,
+                'date': date,
+                'author': {
+                    'display_name': displayName,
+                },
+                'content': content
+            }];
+            comment = {};
+            comment[pageID] = commentInfo;
+
+            // 获取 reference
+            getGitHubReference(function (lastCommitID) {
+                // 获取 commit
+                getGitHubCommit(lastCommitID, function (treeID) {
+                    // 创建新的 tree 对象
+                    postGitHubTree(treeID, function (newTreeID) {
+                        // 创建新的 commit
+                        postGitHubCommit(lastCommitID, newTreeID, function (newCommitID) {
+                            // 修改 reference
+                            postGitHubReference(newCommitID, function () {
+                                // 响应客户端请求
+                                response.end();
+                            });
+                        });
+                    });
+                });
+            });
+        }); // 解析评论数据结束
+    }
+};
 // 创建服务器
-http.createServer( function (request, response) {
-   // 解析请求，包括文件名
-   var pathname = url.parse(request.url).pathname;
-
-   // 输出请求的文件名
-   console.log("Request for " + pathname + " received.");
-
-   // 从文件系统中读取请求的文件内容
-   fs.readFile(pathname.substr(1), function (err, data) {
-      if (err) {
-         console.log(err);
-         // HTTP 状态码: 404 : NOT FOUND
-         // Content Type: text/plain
-         response.writeHead(404, {'Content-Type': 'text/html'});
-      }else{
-         // HTTP 状态码: 200 : OK
-         // Content Type: text/plain
-         response.writeHead(200, {'Content-Type': 'text/html'});
-
-         // 响应文件内容
-         response.write(data.toString());
-      }
-      //  发送响应数据
-      response.end();
-   });
-}).listen(8080);
+var server = http.createServer(requestListener);
+var portNum = 8888;
+server.listen(portNum);
 
 // 控制台会输出以下信息
-console.log('Server running at http://127.0.0.1:8080/');
-
+console.log('Server running at Port' + portNum);
