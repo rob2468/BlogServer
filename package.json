@@ -1,0 +1,9 @@
+{
+  "scripts": {},
+  "entry": {},
+  "dependencies": {
+    "mysql": "^2.16.0",
+    "moment": "^2.13.0"
+  },
+  "devDependencies": {}
+}
