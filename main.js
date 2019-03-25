@@ -118,7 +118,7 @@ function addComment(comment) {
   const content = comment.content;
 
   // 构造 sql 语句
-  const sqlStr = `insert into comments ( page_id, email, time, display_name, content ) VALUES ( '${pageID}', '${email}', '${time}', '${displayName}', '${content}' );`;
+  const sqlStr = `insert into comments ( pageID, email, time, displayName, content ) VALUES ( '${pageID}', '${email}', '${time}', '${displayName}', '${content}' );`;
 
   // 执行 sql
   dbConnection.query(sqlStr, function (error, results, fields) {
@@ -141,18 +141,18 @@ async function queryComments(pageID) {
     dbConnection.connect();
 
     // 构造 sql 语句
-    const sqlStr = `select * from comments where page_id = '${pageID}' order by time desc;`;
+    const sqlStr = `select * from comments where pageID = '${pageID}' order by time desc;`;
 
     // 执行 sql
     dbConnection.query(sqlStr, (error, results, fields) => {
       const comments = [];
       results.forEach(element => {
         const comment = {};
-        comment.pageID = element['page_id'];
+        comment.pageID = element['pageID'];
         comment.email = element['email'];
         const time = element['time'];
         comment.time = (new Date(time)).getTime();;
-        comment.displayName = element['display_name'];
+        comment.displayName = element['displayName'];
         comment.content = element['content'];
         comments.push(comment);
       });
