@@ -7,6 +7,10 @@ const exec = require('child_process').exec;
 const mysql = require('mysql');
 const moment = require('moment');
 
+// 读取配置文件
+const conf = fs.readFileSync('conf.json', 'utf-8');
+const confJSON = JSON.parse(conf);
+
 /**
  * 请求监听
  * @param {object} request
@@ -101,12 +105,7 @@ async function requestListener(request, response) {
  */
 function addComment(comment) {
   // 连接数据库
-  const dbConnection = mysql.createConnection({
-    host     : 'localhost',
-    user     : 'root',
-    password : '123456',
-    database : 'Blog'
-  });
+  const dbConnection = mysql.createConnection(confJSON.mysql);
   dbConnection.connect();
 
   // 解析出数据库字段
@@ -132,12 +131,7 @@ function addComment(comment) {
 async function queryComments(pageID) {
   return new Promise((resolve, reject) => {
     // 连接数据库
-    const dbConnection = mysql.createConnection({
-      host     : 'localhost',
-      user     : 'root',
-      password : '123456',
-      database : 'Blog'
-    });
+    const dbConnection = mysql.createConnection(confJSON.mysql);
     dbConnection.connect();
 
     // 构造 sql 语句
