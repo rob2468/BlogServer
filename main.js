@@ -10,6 +10,7 @@ const moment = require('moment');
 // 读取配置文件
 const conf = fs.readFileSync('conf.json', 'utf-8');
 const confJSON = JSON.parse(conf);
+const pool  = mysql.createPool(confJSON.mysql);
 
 /**
  * 请求监听
@@ -32,7 +33,7 @@ async function requestListener(request, response) {
   if (request.method === 'OPTIONS') {
     response.writeHead(200, responseHeaders);
     response.end();
-  } if (pathname === '/index.html') {
+  } else if (pathname === '/index.html') {
     responseHeaders['Content-Type'] = 'text/html';
     response.writeHead(200, responseHeaders);
     const indexContent = fs.readFileSync('index.html', 'utf-8');
@@ -53,7 +54,7 @@ async function requestListener(request, response) {
   } else if (pathname.indexOf('/api/submitcomment') === 0) {
     // 客户端提交评论
     // domain
-    var localDomain = domain.create();
+    const localDomain = domain.create();
     localDomain.on('error', function(err) {
       // 异常捕获
       response.writeHead(200, responseHeaders);
@@ -64,11 +65,11 @@ async function requestListener(request, response) {
     });
     localDomain.run(function () {
       // run
-      var body = '';
-      request.on('data', function (data) {
-        body += data;
+      let body = '';
+      request.on('data', chunk => {
+        body += chunk.toString();
       });
-      request.on('end', function () {
+      request.on('end', () => {
         if (body.length === 0) {
           throw new Error('评论读取失败');
         }
@@ -105,8 +106,6 @@ async function requestListener(request, response) {
  */
 function addComment(comment) {
   // 连接数据库
-  const dbConnection = mysql.createConnection(confJSON.mysql);
-  dbConnection.connect();
 
   // 解析出数据库字段
   const pageID = comment.pageID;
@@ -120,25 +119,20 @@ function addComment(comment) {
   const sqlStr = `insert into comments ( pageID, email, time, displayName, content ) VALUES ( '${pageID}', '${email}', '${time}', '${displayName}', '${content}' );`;
 
   // 执行 sql
-  dbConnection.query(sqlStr, function (error, results, fields) {
+  pool.query(sqlStr, function (error, results, fields) {
   });
-  dbConnection.end();
 }
 
 /**
  * 查询评论
  */
-async function queryComments(pageID) {
+function queryComments(pageID) {
   return new Promise((resolve, reject) => {
-    // 连接数据库
-    const dbConnection = mysql.createConnection(confJSON.mysql);
-    dbConnection.connect();
-
     // 构造 sql 语句
     const sqlStr = `select * from comments where pageID = '${pageID}' order by time desc;`;
 
     // 执行 sql
-    dbConnection.query(sqlStr, (error, results, fields) => {
+    pool.query(sqlStr, (error, results, fields) => {
       const comments = [];
       results.forEach(element => {
         const comment = {};
@@ -152,7 +146,6 @@ async function queryComments(pageID) {
       });
       resolve(comments);
     });
-    dbConnection.end();
   });
 }
 
