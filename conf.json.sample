@@ -1,5 +1,11 @@
 {
+  "certificate": {
+    "privateKeyFilePath": "./tmp/privkey.pem",
+    "certificateFilePath": "./tmp/cert.pem",
+    "caFilePath": "./tmp/chain.pem"
+  },
   "mysql": {
+    "connectionLimit" : 10,
     "host"     : "localhost",
     "user"     : "root",
     "password" : "123456",

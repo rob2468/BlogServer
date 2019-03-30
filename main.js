@@ -7,12 +7,24 @@ const mysql = require('mysql');
 const moment = require('moment');
 const express = require('express');
 
-const app = express();
-
 // 读取配置文件
 const conf = fs.readFileSync('conf.json', 'utf-8');
 const confJSON = JSON.parse(conf);
+
+// Certificate
+const privateKey = fs.readFileSync(confJSON.certificate.privateKeyFilePath, 'utf8');
+const certificate = fs.readFileSync(confJSON.certificate.certificateFilePath, 'utf8');
+const ca = fs.readFileSync(confJSON.certificate.caFilePath, 'utf8');
+const credentials = {
+	key: privateKey,
+	cert: certificate,
+	ca,
+};
+
+// 创建数据库连接池
 const pool  = mysql.createPool(confJSON.mysql);
+
+const app = express();
 
 app.use(async (request, response) => {
   // 解析请求，包括文件名
@@ -99,10 +111,14 @@ app.use(async (request, response) => {
   }
 });
 
-const httpServer = http.createServer(app);
+// const httpServer = http.createServer(app);
+// httpServer.listen(80, () => {
+//   console.log('HTTP Server running on port 80');
+// });
 
-httpServer.listen(80, () => {
-  console.log('HTTP Server running on port 80');
+const httpsServer = https.createServer(credentials, app);
+httpsServer.listen(443, () => {
+	console.log('HTTPS Server running on port 443');
 });
 
 /**
