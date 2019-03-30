@@ -3,34 +3,32 @@ const https = require('https');
 const fs = require('fs');
 const url = require('url');
 const domain = require('domain');
-const exec = require('child_process').exec;
 const mysql = require('mysql');
 const moment = require('moment');
+const express = require('express');
+
+const app = express();
 
 // 读取配置文件
 const conf = fs.readFileSync('conf.json', 'utf-8');
 const confJSON = JSON.parse(conf);
 const pool  = mysql.createPool(confJSON.mysql);
 
-/**
- * 请求监听
- * @param {object} request
- * @param {object} response
- */
-async function requestListener(request, response) {
+app.use(async (request, response) => {
   // 解析请求，包括文件名
   const parsedURL = url.parse(request.url, true);
   const pathname = parsedURL.pathname;
   const query = parsedURL.query;
+  const method = request.method;
 
   // 输出请求的文件名
-  console.log(`Request received.\n    Path: ${pathname}\n    Query: ${JSON.stringify(query)}\n    Method: ${request.method}`);
+  console.log(`Request received.\n    Path: ${pathname}\n    Query: ${JSON.stringify(query)}\n    Method: ${method}`);
 
   // 服务器需要设置的响应头
   const responseHeaders = {'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'Content-Type'};
 
-  if (request.method === 'OPTIONS') {
+  if (method === 'OPTIONS') {
     response.writeHead(200, responseHeaders);
     response.end();
   } else if (pathname === '/index.html') {
@@ -99,7 +97,13 @@ async function requestListener(request, response) {
       }); // request on end
     }); // domain run
   }
-}
+});
+
+const httpServer = http.createServer(app);
+
+httpServer.listen(80, () => {
+  console.log('HTTP Server running on port 80');
+});
 
 /**
  * 增加评论
@@ -148,14 +152,6 @@ function queryComments(pageID) {
     });
   });
 }
-
-// 创建服务器
-const server = http.createServer(requestListener);
-const portNum = 8888;
-server.listen(portNum);
-
-// 控制台会输出以下信息
-console.log('Server running at Port ' + portNum);
 
 process.on('unhandledRejection', (reason, promise) => {
   console.log('Unhandled Rejection at:', reason.stack || reason)
