@@ -2,3 +2,6 @@ tmp/
 .vscode/
 node_modules/
 conf.json
+
+# certbot 用于生成 https 证书的信息
+.well-known/

@@ -16,9 +16,9 @@ const privateKey = fs.readFileSync(confJSON.certificate.privateKeyFilePath, 'utf
 const certificate = fs.readFileSync(confJSON.certificate.certificateFilePath, 'utf8');
 const ca = fs.readFileSync(confJSON.certificate.caFilePath, 'utf8');
 const credentials = {
-	key: privateKey,
-	cert: certificate,
-	ca,
+  key: privateKey,
+  cert: certificate,
+  ca,
 };
 
 // 创建数据库连接池
@@ -118,7 +118,7 @@ app.use(async (request, response) => {
 
 const httpsServer = https.createServer(credentials, app);
 httpsServer.listen(443, () => {
-	console.log('HTTPS Server running on port 443');
+  console.log('HTTPS Server running on port 443');
 });
 
 /**
