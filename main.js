@@ -87,15 +87,17 @@ app.use(async (request, response) => {
         const postData = JSON.parse(body);
         const pageID = postData.pageID;
         const email = postData.email;
-        const time = postData.time;
         const displayName = postData.displayName;
         const content = postData.content;
+        const timestamp = postData.timestamp;
+        const displayTime = postData.displayTime;
         const comment = {
           pageID,
           email,
-          time,
           displayName,
           content,
+          timestamp,
+          displayTime
         };
         addComment(comment);
 
@@ -130,13 +132,14 @@ function addComment(comment) {
   // 解析出数据库字段
   const pageID = comment.pageID;
   const email = comment.email;
-  let time = comment.time;
-  time = moment(time).utcOffset(8).format('YYYY-MM-DD HH:mm:ss');
   const displayName = comment.displayName;
   const content = comment.content;
+  const timestamp = comment.timestamp;
+  const displayTime = comment.displayTime;
+
 
   // 构造 sql 语句
-  const sqlStr = `insert into comments ( pageID, email, time, displayName, content ) VALUES ( '${pageID}', '${email}', '${time}', '${displayName}', '${content}' );`;
+  const sqlStr = `insert into comments ( pageID, email, displayName, content, timestamp, displayTime ) VALUES ( '${pageID}', '${email}', '${displayName}', '${content}', '${timestamp}', '${displayTime}' );`;
 
   // 执行 sql
   pool.query(sqlStr, function (error, results, fields) {
@@ -149,7 +152,7 @@ function addComment(comment) {
 function queryComments(pageID) {
   return new Promise((resolve, reject) => {
     // 构造 sql 语句
-    const sqlStr = `select * from comments where pageID = '${pageID}' order by time desc;`;
+    const sqlStr = `select * from comments where pageID = '${pageID}' order by timestamp desc;`;
 
     // 执行 sql
     pool.query(sqlStr, (error, results, fields) => {
@@ -158,10 +161,10 @@ function queryComments(pageID) {
         const comment = {};
         comment.pageID = element['pageID'];
         comment.email = element['email'];
-        const time = element['time'];
-        comment.time = moment(time).utcOffset(8).toDate().getTime();
         comment.displayName = element['displayName'];
         comment.content = element['content'];
+        comment.timestamp = element['timestamp'];
+        comment.displayTime = element['displayTime'];
         comments.push(comment);
       });
       resolve(comments);
