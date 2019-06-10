@@ -131,7 +131,7 @@ function addComment(comment) {
   const pageID = comment.pageID;
   const email = comment.email;
   let time = comment.time;
-  time = moment(time).format('YYYY-MM-DD HH:mm:ss');
+  time = moment(time).utcOffset(8).format('YYYY-MM-DD HH:mm:ss');
   const displayName = comment.displayName;
   const content = comment.content;
 
@@ -159,7 +159,7 @@ function queryComments(pageID) {
         comment.pageID = element['pageID'];
         comment.email = element['email'];
         const time = element['time'];
-        comment.time = (new Date(time)).getTime();;
+        comment.time = moment(time).utcOffset(8).toDate().getTime();
         comment.displayName = element['displayName'];
         comment.content = element['content'];
         comments.push(comment);
