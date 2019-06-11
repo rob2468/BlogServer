@@ -1,3 +1,5 @@
+'use strict';
+
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
@@ -6,6 +8,7 @@ const domain = require('domain');
 const mysql = require('mysql');
 const moment = require('moment');
 const express = require('express');
+const { addComment, queryComments } = require('./comment');
 
 // 读取配置文件
 const conf = fs.readFileSync('conf.json', 'utf-8');
@@ -56,7 +59,7 @@ app.use(async (request, response) => {
   } else if (pathname.indexOf('/api/comments') === 0) {
     // 查询评论
     const pageID = query['page_id'];
-    const comments = await queryComments(pageID);
+    const comments = await queryComments(pool, pageID);
 
     response.writeHead(200, responseHeaders);
     response.write(JSON.stringify(comments));
@@ -99,7 +102,7 @@ app.use(async (request, response) => {
           timestamp,
           displayTime
         };
-        addComment(comment);
+        addComment(pool, comment);
 
         // 响应客户端请求
         response.writeHead(200, responseHeaders);
@@ -122,55 +125,6 @@ const httpsServer = https.createServer(credentials, app);
 httpsServer.listen(443, () => {
   console.log('HTTPS Server running on port 443');
 });
-
-/**
- * 增加评论
- */
-function addComment(comment) {
-  // 连接数据库
-
-  // 解析出数据库字段
-  const pageID = comment.pageID;
-  const email = comment.email;
-  const displayName = comment.displayName;
-  const content = comment.content;
-  const timestamp = comment.timestamp;
-  const displayTime = comment.displayTime;
-
-
-  // 构造 sql 语句
-  const sqlStr = `insert into comments ( pageID, email, displayName, content, timestamp, displayTime ) VALUES ( '${pageID}', '${email}', '${displayName}', '${content}', '${timestamp}', '${displayTime}' );`;
-
-  // 执行 sql
-  pool.query(sqlStr, function (error, results, fields) {
-  });
-}
-
-/**
- * 查询评论
- */
-function queryComments(pageID) {
-  return new Promise((resolve, reject) => {
-    // 构造 sql 语句
-    const sqlStr = `select * from comments where pageID = '${pageID}' order by timestamp desc;`;
-
-    // 执行 sql
-    pool.query(sqlStr, (error, results, fields) => {
-      const comments = [];
-      results.forEach(element => {
-        const comment = {};
-        comment.pageID = element['pageID'];
-        comment.email = element['email'];
-        comment.displayName = element['displayName'];
-        comment.content = element['content'];
-        comment.timestamp = element['timestamp'];
-        comment.displayTime = element['displayTime'];
-        comments.push(comment);
-      });
-      resolve(comments);
-    });
-  });
-}
 
 process.on('unhandledRejection', (reason, promise) => {
   console.log('Unhandled Rejection at:', reason.stack || reason)
