@@ -9,6 +9,7 @@ const mysql = require('mysql');
 const moment = require('moment');
 const express = require('express');
 const { addComment, queryComments } = require('./comment');
+const { addBehaviorRecord } = require('./statistic');
 
 // 读取配置文件
 const conf = fs.readFileSync('conf.json', 'utf-8');
@@ -46,26 +47,27 @@ app.use(async (request, response) => {
   if (method === 'OPTIONS') {
     response.writeHead(200, responseHeaders);
     response.end();
-  } else if (pathname === '/index.html') {
-    responseHeaders['Content-Type'] = 'text/html';
-    response.writeHead(200, responseHeaders);
-    const indexContent = fs.readFileSync('index.html', 'utf-8');
-    response.write(indexContent);
-    response.end();
-  } else if (pathname.indexOf('/tmp') === 0) {
-    // 不允许请求 tmp 内文件
-    response.writeHead(404, responseHeaders);
-    response.end();
-  } else if (pathname.indexOf('/api/comments') === 0) {
-    // 查询评论
-    const pageID = query['page_id'];
-    const comments = await queryComments(pool, pageID);
+  } else if (method === 'GET') {
+    if (pathname === '/index.html') {
+      responseHeaders['Content-Type'] = 'text/html';
+      response.writeHead(200, responseHeaders);
+      const indexContent = fs.readFileSync('index.html', 'utf-8');
+      response.write(indexContent);
+      response.end();
+    } else if (pathname.indexOf('/tmp') === 0) {
+      // 不允许请求 tmp 内文件
+      response.writeHead(404, responseHeaders);
+      response.end();
+    } else if (pathname.indexOf('/api/comments') === 0) {
+      // 查询评论
+      const pageID = query['page_id'];
+      const comments = await queryComments(pool, pageID);
 
-    response.writeHead(200, responseHeaders);
-    response.write(JSON.stringify(comments));
-    response.end();
-  } else if (pathname.indexOf('/api/submitcomment') === 0) {
-    // 客户端提交评论
+      response.writeHead(200, responseHeaders);
+      response.write(JSON.stringify(comments));
+      response.end();
+    }
+  } else if (method === 'POST') {
     // domain
     const localDomain = domain.create();
     localDomain.on('error', function(err) {
@@ -84,31 +86,25 @@ app.use(async (request, response) => {
       });
       request.on('end', () => {
         if (body.length === 0) {
-          throw new Error('评论读取失败');
+          throw new Error('body 读取失败');
         }
-        // 前端发来的数据
-        const postData = JSON.parse(body);
-        const pageID = postData.pageID;
-        const email = postData.email;
-        const displayName = postData.displayName;
-        const content = postData.content;
-        const timestamp = postData.timestamp;
-        const displayTime = postData.displayTime;
-        const comment = {
-          pageID,
-          email,
-          displayName,
-          content,
-          timestamp,
-          displayTime
-        };
-        addComment(pool, comment);
+        let result = {};
+        if (pathname.indexOf('/api/submitcomment') === 0) {
+          // 客户端提交评论
+          const comment = JSON.parse(body);
+          addComment(pool, comment);
 
+          result = comment;
+        } else if (pathname.indexOf('/api/addstat') === 0) {
+          // 行为统计
+          const record = JSON.parse(body);
+          addBehaviorRecord(pool, record);
+        }
         // 响应客户端请求
         response.writeHead(200, responseHeaders);
         response.write(JSON.stringify({
           success: true,
-          result: comment,
+          result,
         }));
         response.end();
       }); // request on end
