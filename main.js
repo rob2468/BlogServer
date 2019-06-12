@@ -9,7 +9,7 @@ const mysql = require('mysql');
 const moment = require('moment');
 const express = require('express');
 const { addComment, queryComments } = require('./comment');
-const { addBehaviorRecord } = require('./statistic');
+const { addBehaviorRecord, queryStatisticData } = require('./statistic');
 
 // 读取配置文件
 const conf = fs.readFileSync('conf.json', 'utf-8');
@@ -65,6 +65,38 @@ app.use(async (request, response) => {
 
       response.writeHead(200, responseHeaders);
       response.write(JSON.stringify(comments));
+      response.end();
+    } else if (pathname.indexOf('/api/stat') === 0) {
+      // 查询行为数据
+      // display_time：请求日期，如，2019-06-12
+      // prev_days：前若干天，如，10
+      const { display_time, prev_days } = query;
+
+      let success = true;
+      let result = {};
+      let resultView = '';
+
+      if (!display_time) {
+        success = false;
+        resultView = '日期不对';
+      } else if (prev_days > 20) {
+        success = false;
+        resultView = '请求的天数太长，目前一次请求最多允许20天';
+      } else {
+        // 检索数据库
+        result = await queryStatisticData(pool, display_time, prev_days);
+      }
+
+      // 构造响应数据
+      const responseData = {
+        success,
+        result,
+        resultView,
+      };
+
+      // 请求响应
+      response.writeHead(200, responseHeaders);
+      response.write(JSON.stringify(responseData));
       response.end();
     }
   } else if (method === 'POST') {
