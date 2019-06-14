@@ -4,8 +4,6 @@
  * 增加评论
  */
 exports.addComment = function (pool, comment) {
-  // 连接数据库
-
   // 解析出数据库字段
   const pageID = comment.pageID;
   const email = comment.email;
@@ -33,7 +31,7 @@ exports.queryComments = function (pool, pageID) {
     // 执行 sql
     pool.query(sqlStr, (error, results, fields) => {
       const comments = [];
-      results.forEach(element => {
+      results && results.forEach(element => {
         const comment = {};
         comment.pageID = element['pageID'];
         comment.email = element['email'];

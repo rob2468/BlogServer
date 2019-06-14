@@ -8,17 +8,24 @@ const domain = require('domain');
 const mysql = require('mysql');
 const moment = require('moment');
 const express = require('express');
+const path = require('path');
 const { addComment, queryComments } = require('./comment');
 const { addBehaviorRecord, queryStatisticData } = require('./statistic');
+const { sendMail } = require('./util');
+
+global.appRoot = path.resolve(__dirname + '/..'); // 解析出根目录
 
 // 读取配置文件
-const conf = fs.readFileSync('conf.json', 'utf-8');
+const conf = fs.readFileSync(appRoot + '/config/conf.json', 'utf-8');
 const confJSON = JSON.parse(conf);
+const {
+  mail: mailConf,
+} = confJSON;
 
 // Certificate
-const privateKey = fs.readFileSync(confJSON.certificate.privateKeyFilePath, 'utf8');
-const certificate = fs.readFileSync(confJSON.certificate.certificateFilePath, 'utf8');
-const ca = fs.readFileSync(confJSON.certificate.caFilePath, 'utf8');
+const privateKey = fs.readFileSync(appRoot + confJSON.certificate.privateKeyFilePath, 'utf8');
+const certificate = fs.readFileSync(appRoot + confJSON.certificate.certificateFilePath, 'utf8');
+const ca = fs.readFileSync(appRoot + confJSON.certificate.caFilePath, 'utf8');
 const credentials = {
   key: privateKey,
   cert: certificate,
@@ -125,6 +132,9 @@ app.use(async (request, response) => {
           // 客户端提交评论
           const comment = JSON.parse(body);
           addComment(pool, comment);
+
+          // 邮件通知
+          sendMail(mailConf.email, body);
 
           result = comment;
         } else if (pathname.indexOf('/api/addstat') === 0) {
