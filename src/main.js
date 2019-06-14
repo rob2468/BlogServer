@@ -23,9 +23,9 @@ const {
 } = confJSON;
 
 // Certificate
-const privateKey = fs.readFileSync(appRoot + confJSON.certificate.privateKeyFilePath, 'utf8');
-const certificate = fs.readFileSync(appRoot + confJSON.certificate.certificateFilePath, 'utf8');
-const ca = fs.readFileSync(appRoot + confJSON.certificate.caFilePath, 'utf8');
+const privateKey = fs.readFileSync(confJSON.certificate.privateKeyFilePath, 'utf8');
+const certificate = fs.readFileSync(confJSON.certificate.certificateFilePath, 'utf8');
+const ca = fs.readFileSync(confJSON.certificate.caFilePath, 'utf8');
 const credentials = {
   key: privateKey,
   cert: certificate,
