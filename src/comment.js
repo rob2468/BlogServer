@@ -16,7 +16,7 @@ exports.addComment = function (pool, comment) {
   } = comment;
 
   // 构造 sql 语句，更新 comments 表
-  const commentsSql = `insert into comments ( pageID, email, displayName, content, timestamp, displayTime ) VALUES ( '${pageId}', '${email}', '${displayName}', '${content}', '${timestamp}', '${displayTime}' );`;
+  const commentsSql = `insert into comments ( pageId, email, displayName, content, timestamp, displayTime ) VALUES ( '${pageId}', '${email}', '${displayName}', '${content}', '${timestamp}', '${displayTime}' );`;
 
   // 执行 sql
   pool.query(commentsSql, function (error, results, fields) {
@@ -30,17 +30,17 @@ exports.addComment = function (pool, comment) {
 /**
  * 查询评论
  */
-exports.queryComments = function (pool, pageID) {
+exports.queryComments = function (pool, pageId) {
   return new Promise((resolve, reject) => {
     // 构造 sql 语句
-    const sqlStr = `select * from comments where pageID = '${pageID}' order by timestamp desc;`;
+    const sqlStr = `select * from comments where pageId = '${pageId}' order by timestamp desc;`;
 
     // 执行 sql
     pool.query(sqlStr, (error, results, fields) => {
       const comments = [];
       results && results.forEach(element => {
         const comment = {};
-        comment.pageID = element['pageID'];
+        comment.pageId = element['pageId'];
         comment.email = element['email'];
         comment.displayName = element['displayName'];
         comment.content = element['content'];
