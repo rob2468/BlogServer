@@ -5,19 +5,26 @@
  */
 exports.addComment = function (pool, comment) {
   // 解析出数据库字段
-  const pageID = comment.pageID;
-  const email = comment.email;
-  const displayName = comment.displayName;
-  const content = comment.content;
-  const timestamp = comment.timestamp;
-  const displayTime = comment.displayTime;
+  const {
+    pageId,
+    title,
+    email,
+    displayName,
+    content,
+    timestamp,
+    displayTime,
+  } = comment;
 
-  // 构造 sql 语句
-  const sqlStr = `insert into comments ( pageID, email, displayName, content, timestamp, displayTime ) VALUES ( '${pageID}', '${email}', '${displayName}', '${content}', '${timestamp}', '${displayTime}' );`;
+  // 构造 sql 语句，更新 comments 表
+  const commentsSql = `insert into comments ( pageID, email, displayName, content, timestamp, displayTime ) VALUES ( '${pageId}', '${email}', '${displayName}', '${content}', '${timestamp}', '${displayTime}' );`;
 
   // 执行 sql
-  pool.query(sqlStr, function (error, results, fields) {
+  pool.query(commentsSql, function (error, results, fields) {
   });
+
+  // 构造 sql 语句，更新 posts 表
+  const postsSql = `replace into posts ( pageId, title ) values ( '${pageId}', '${title}' )`;
+  pool.query(postsSql, (error, results, fields) => {});
 };
 
 /**

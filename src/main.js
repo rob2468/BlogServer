@@ -67,8 +67,8 @@ app.use(async (request, response) => {
       response.end();
     } else if (pathname.indexOf('/api/comments') === 0) {
       // 查询评论
-      const pageID = query['page_id'];
-      const comments = await queryComments(pool, pageID);
+      const pageId = query['page_id'];
+      const comments = await queryComments(pool, pageId);
 
       response.writeHead(200, responseHeaders);
       response.write(JSON.stringify(comments));
