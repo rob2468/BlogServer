@@ -41,7 +41,6 @@ exports.queryComments = function (pool, pageId) {
       results && results.forEach(element => {
         const comment = {};
         comment.pageId = element['pageId'];
-        comment.email = element['email'];
         comment.displayName = element['displayName'];
         comment.content = element['content'];
         comment.timestamp = element['timestamp'];
