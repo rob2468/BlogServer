@@ -14,12 +14,13 @@ exports.addBehaviorRecord = function (pool, record) {
   const timestamp = record.timestamp;
   const displayTime = record.displayTime;
 
-  // 构造 sql 语句
-  const sqlStr = `insert into behavior_stat ( pageId, title, behaviorId, cityName, ipAddr, timestamp, displayTime ) VALUES ( '${pageId}', '${title}', '${behaviorId}', '${cityName}', '${ipAddr}', '${timestamp}', '${displayTime}' );`;
+  // 插入 behavior_stat 表
+  const sqlStr = `INSERT INTO behavior_stat ( pageId, behaviorId, cityName, ipAddr, timestamp, displayTime ) VALUES ( '${pageId}', '${behaviorId}', '${cityName}', '${ipAddr}', '${timestamp}', '${displayTime}' );`;
+  pool.query(sqlStr, (error, results, fields) => {});
 
-  // 执行 sql
-  pool.query(sqlStr, function (error, results, fields) {
-  });
+  // 插入 posts 表
+  const postsSql = `REPLACE INTO posts ( pageId, title ) VALUES ( '${pageId}', '${title}' )`;
+  pool.query(postsSql, (error, results, fields) => {});
 };
 
 /**
@@ -45,7 +46,7 @@ exports.queryStatisticData = function (pool, displayTime, prevDays) {
     let num = 0;  // 记录完成检索的次数
     displayTimeArr.forEach(displayTime => {
       // 检索指定日期的访问量，以文章做分组，访问量从大到小排列
-      const sqlStr = `select count(*) as count, pageId, title from behavior_stat where displayTime='${displayTime}' group by pageId, title order by count desc`;
+      const sqlStr = `SELECT count(*) as count, b.pageId, p.title FROM behavior_stat b JOIN posts p ON b.pageId = p.pageId WHERE b.displayTime='${displayTime}' GROUP BY b.pageId ORDER BY count DESC;`;
 
       // 执行 sql
       pool.query(sqlStr, (error, results, fields) => {
