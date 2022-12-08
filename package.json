@@ -2,7 +2,7 @@
   "scripts": {},
   "entry": {},
   "dependencies": {
-    "express": "^4.16.4",
+    "express": "^4.18.2",
     "mysql": "^2.16.0",
     "moment": "^2.13.0"
   },
